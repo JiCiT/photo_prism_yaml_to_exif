@@ -7,9 +7,9 @@ Option                   Environment var          Default
 -log_level               LOG_LEVEL                warn
 	Set logging level
 -help                    -                        
--yaml_dir                -                        /usr/src/app
+-yaml_dir                YAML_DIR                 /usr/src/app
 	Root directory with PhotoPrism YAML sidecar files
--image_dir               -                        /usr/src/app
+-image_dir               IMAGE_DIR                /usr/src/app
 	Root directory with original image files
 -uid                     -                        0
 	UserId for file owner (chown)

@@ -107,7 +107,7 @@ my $args = {
 my $arg = Getopt::Simple->new();
 
 # parse given arguments in relation to defined options
-if (! $arg->getOptions($args, "Usage: PhotoPrism_YAML_to_EXIM.pl [args]")) {
+if (! $arg->getOptions($args, "Usage: photo_prism_yaml_to_exif.pl [args]")) {
     exit (-1);
 }
 

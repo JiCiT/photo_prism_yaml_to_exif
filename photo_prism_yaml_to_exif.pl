@@ -13,6 +13,7 @@ use YAML::PP;
 use Image::ExifTool;
 use DateTime;
 use DateTime::Format::EXIF;
+use List::Util qw(min);
 
 # define available arguments
 my $args = {
@@ -298,63 +299,38 @@ sub process_file {
         
         # if EXIF has DateTimeOriginal...
         if ($date_time_exif) {
-            #...convert to ISO8601 time to DateTime object
+            #...convert to DateTime object
             $date_time_exif = DateTime::Format::EXIF->parse_datetime($date_time_exif);
+        # otherwise...
         } else {
+            # ...set exif date to EPOCH
             $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
         }
+        log_debug('$date_time_exif: %s', $date_time_exif->iso8601);
         
         # prime/assume YAML datatime will be the same
         my $date_time_yaml = $date_time_exif->clone();
 
-        # year
-        # if...
-        log_trace('checking for date disparity between YAML and EXIF');
-        if (
-                # ...YAML has year...
-                $data_yaml->{'Year'}
-                #...and the year is NOT -1...
-            &&  $data_yaml->{'Year'} != -1
-                #...and EXIF doesn't match...
-            &&  $data_yaml->{'Year'} != $date_time_exif->year
-        ) {
-            # ...set the year
-            $date_time_yaml->set(year => $data_yaml->{'Year'});
-            log_debug('Reset $date_time_yaml to: %s"', $date_time_yaml->iso8601);
-        }
+        # get the various date parts from YAML
+        my $date_to_year    = $data_yaml->{'Year'}  > 0 ? $data_yaml->{'Year'}  : 1900;
+        my $date_to_month   = $data_yaml->{'Month'} > 0 ? $data_yaml->{'Month'} : 1;
+        my $date_to_day     = $data_yaml->{'Day'}   > 0 ? $data_yaml->{'Day'}   : 1;
         
-        # month
-        # if...
-        if (
-                # ...YAML has month...
-                $data_yaml->{'Month'}
-                # ...and the month is NOT -1...
-            &&  $data_yaml->{'Month'} != -1
-                #...and EXIF doesn't match...
-            &&  $data_yaml->{'Month'} != $date_time_exif->month
-        ) {
-            # ...set the month
-            $date_time_yaml->set(month => $data_yaml->{'Month'});
-            log_debug('Reset $date_time_yaml to: %s"', $date_time_yaml->iso8601);
-        }
-        
-        # day
-        # if...
-        if (
-                # ...YAML has day...
-                $data_yaml->{'Day'}
-                # ...and the day is NOT -1...
-            &&  $data_yaml->{'Day'} != -1
-                #...and EXIF doesn't match...
-            &&  $data_yaml->{'Day'} != $date_time_exif->day
-        ) {
-            # ...set the day
-            $date_time_yaml->set(day => $data_yaml->{'Day'});
-            log_debug('Reset $date_time_yaml to: %s"', $date_time_yaml->iso8601);
-        }
+        log_trace('$date_to_year: %i',  $date_to_year);
+        log_trace('$date_to_month: %i', $date_to_month);
+        log_trace('$date_to_day: %i',   $date_to_day);
+
+        # ensure day is not greater than the number of days in the month!
+        $date_to_day        = min($date_to_day, days_in_month($date_to_year, $date_to_month));
+        log_trace('$date_to_day adjusted to: %i',   $date_to_day);
+
+        log_trace('Setting $date_time_yaml to %i-%i-%i', $date_to_year, $date_to_month, $date_to_day);
+        $date_time_yaml->set(year => $date_to_year, month => $date_to_month, day => $date_to_day);
+        log_trace('$date_time_yaml: %s"', $date_time_yaml->iso8601);
 
         # if YAML date is different than EXIF date...
-        if (DateTime->compare($date_time_yaml, $date_time_exif) != 0) {
+        # __NOTE__ - ignoring time for YAML vs. EXIF comparison
+        if (DateTime->compare($date_time_yaml->truncate(to => 'day'), $date_time_exif->truncate(to => 'day')) != 0) {
             # reset EXIF date
             log_debug('setting EXIF  DateTimeOriginal to %s', $date_time_yaml->iso8601);
             $exif_tool->SetNewValue('DateTimeOriginal', $date_time_yaml->iso8601);
@@ -384,5 +360,38 @@ sub process_file {
 # Recurse through YAML dir
 log_debug('Processing image dir "%s"', $args->{'image_dir'});
 find(\&process_file, ($args->{'image_dir'}));
+
+### Days In Month
+
+sub days_in_month {
+    my %m2d = qw(
+         1      31
+         3      31
+         4      30
+         5      31
+         6      30
+         7      31
+         8      31
+         9      30
+        10      31
+        11      30
+        12      31
+    );
+     
+    my ($year, $month) = @_;
+    
+    return $m2d{$month+0} unless $month == 2;
+    return 28 unless &is_leap($year);
+    return 29;
+    
+    sub is_leap
+    {
+            my ($year) = @_;
+            return 0 unless $year % 4 == 0;
+            return 1 unless $year % 100 == 0;
+            return 0 unless $year % 400 == 0;
+            return 1;
+    }
+ }
 
 exit(0);

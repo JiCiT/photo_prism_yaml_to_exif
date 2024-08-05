@@ -11,7 +11,6 @@ use File::Find;
 use File::Basename;
 use YAML::PP;
 use Image::ExifTool;
-use Data::Leaf::Walker;
 use DateTime;
 use DateTime::Format::EXIF;
 

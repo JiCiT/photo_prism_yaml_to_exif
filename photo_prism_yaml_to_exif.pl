@@ -34,14 +34,14 @@ my $args = {
     , yaml_dir              => {
           type      => '=s'
         , env       => 'YAML_DIR'
-        , default   => cwd()
+        , default   => $ENV{'YAML_DIR'} || cwd()
         , verbose   => 'Root directory with PhotoPrism YAML sidecar files'
         , order     => 2
       }
     , image_dir         => {
           type      => '=s'
         , env       => 'IMAGE_DIR'
-        , default   => cwd()
+        , default   => $ENV{'IMAGE_DIR'} || cwd()
         , verbose   => 'Root directory with original image files'
         , order     => 3
       }

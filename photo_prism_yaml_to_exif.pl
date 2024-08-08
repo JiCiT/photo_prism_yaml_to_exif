@@ -4,16 +4,17 @@ use v5.12;
 use Log::ger::Output 'Screen';
 use Log::ger::Util;
 use Log::ger;
-use Getopt::Simple qw($switch);
-use Privileges::Drop;
 use Cwd;
-use File::Find;
-use File::Basename;
-use YAML::PP;
-use Image::ExifTool;
 use DateTime;
 use DateTime::Format::EXIF;
+use File::Basename;
+use File::Find;
+use File::Spec;
+use Getopt::Simple qw($switch);
+use Image::ExifTool;
 use List::Util qw(min);
+use Privileges::Drop;
+use YAML::PP;
 
 # define available arguments
 my $args = {
@@ -38,7 +39,7 @@ my $args = {
         , verbose   => 'Root directory with PhotoPrism YAML sidecar files'
         , order     => 2
       }
-    , image_dir         => {
+    , image_dir             => {
           type      => '=s'
         , env       => '-'
         , default   => cwd()
@@ -144,7 +145,7 @@ sub process_file {
     log_trace('$filename_image: "%s"', $filename_image);
     
     # get absolute path to image
-    my $abs_path_image = $File::Find::dir . '/' . $filename_image;
+    my $abs_path_image = File::Spec->catfile($File::Find::dir, $filename_image);
     log_debug('processing image file "%s"', $abs_path_image);
 
     # skip root (.) and parent (..) directories
@@ -223,11 +224,11 @@ sub process_file {
     log_trace('$filename_yaml: "%s"', $filename_yaml);
 
     # get the full path to the YAML file
-    # 1. strip off the "root" if the image_dir path 
+    # 1. strip off the "root" of the image_dir path 
     my $sub_dirs = $File::Find::dir =~ s/^\Q$args->{'image_dir'}//r;
     log_trace('$sub_dirs = "%s"', $sub_dirs);
     # 2. join togther the "yaml_path" , sub-dirs from step 1, and the filename.yml
-    my $abs_path_yaml = $args->{'yaml_dir'} . $sub_dirs . '/' . $filename_yaml;
+    my $abs_path_yaml = File::Spect->catfile($args->{'yaml_dir'}, $sub_dirs, $filename_yaml);
     log_trace('$abs_path_yaml: "%s"', $abs_path_yaml);
     log_debug('searching for YAML file "%s"', $abs_path_yaml);
 
@@ -245,8 +246,6 @@ sub process_file {
         $exif_tool->SetNewValue();
 
         # get EXIF info for the orresponding image file
-        # __NOTE__ - this assumers only one file matched the glob above
-        #	     But that should have been error handled above
         log_trace('parsing EXIF data into $data_exif');
         my $data_exif = $exif_tool->ImageInfo($abs_path_image);
         

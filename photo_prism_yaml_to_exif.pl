@@ -34,15 +34,15 @@ my $args = {
       }
     , yaml_dir              => {
           type      => '=s'
-        , env       => '-'
-        , default   => cwd()
+        , env       => 'YAML_DIR'
+        , default   => $ENV{'YAML_DIR'} || cwd()
         , verbose   => 'Root directory with PhotoPrism YAML sidecar files'
         , order     => 2
       }
     , image_dir             => {
           type      => '=s'
-        , env       => '-'
-        , default   => cwd()
+        , env       => 'IMAGE_DIR'
+        , default   => $ENV{'IMAGE_DIR'} || cwd()
         , verbose   => 'Root directory with original image files'
         , order     => 3
       }
@@ -108,7 +108,7 @@ my $args = {
 my $arg = Getopt::Simple->new();
 
 # parse given arguments in relation to defined options
-if (! $arg->getOptions($args, "Usage: PhotoPrism_YAML_to_EXIM.pl [args]")) {
+if (! $arg->getOptions($args, "Usage: photo_prism_yaml_to_exif.pl [args]")) {
     exit (-1);
 }
 

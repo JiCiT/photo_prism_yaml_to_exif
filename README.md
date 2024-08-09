@@ -1,33 +1,66 @@
 # photo_prism_yaml_to_exif
 
+## Description
 A perl script to transfer data from PhotoPrism created YAML sidecar flies to the associated image file's EXIF data.
 
+## Usage
+
 ```console
-Usage: photo_prism_yaml_to_exif.pl [args]
-Option                   Environment var          Default
--log_level               LOG_LEVEL                warn
-    Set logging level
--help                    -                        
--yaml_dir                YAML_DIR                 /usr/src/app
-    Root directory with PhotoPrism YAML sidecar files
--image_dir               IMAGE_DIR                /usr/src/app
-    Root directory with original image files
--uid                     -                        0
-    UserId for file owner (chown)
--gid                     -                        0
-    GroupId for file owner (chown)
--reprocess_originals     -                        0
-    Reprocess original files (.orig file extension)
--latitude                -                        1
-    Adjust latitude
--longitude               -                        1
-    Adjust longitude
--altitude                -                        1
-    Adjust altitude
--date_time_original      -                        1
-    Adjust DateTimeOrginal
--create_date             -                        1
-    Adjust DateTimeOrginal
+photo_prism_yaml_to_exif.pl [long options...]
+        --log_level STR             Logging level.  DEFAULT: (
+                                    $ENV{'PPYX_LOG_LEVEL'} || info)
+                                    aka --ll
+                                    (default value: info)
+        --yaml_dir STR              Root direcotry with PhotoPrism YAML
+                                    sidecard files.  DEFAULT:
+                                    $ENV{'PPYX_YAML_DIR'} || cwd()
+                                    aka --yd
+                                    (default value: /mnt/sda1/media/Photos/backup_working)
+        --image_dir STR             Root directory with original image files.
+                                     DEFAULT: ( $ENV{'PPYX_IMAGE_DIR'} ||
+                                    cwd() )
+                                    aka --id
+                                    (default value: /mnt/sda1/media/Photos/backup_working)
+        --ignore_dir[=STR...]       Directory to ignore. May be lsited
+                                    multiple times.
+                                    aka --xd
+        --dirs_ignore[=STR]         Space delimited list of directories to
+                                    ignore.  DEFAULT: (
+                                    $ENV{'PPYX_DIRS_IGNORE'} || [] )
+                                    aka --dsx
+                                    (default value: ARRAY(0x5555a52bd948))
+        --user_id INT               User ID to run as.  DEFAULT: (
+                                    $ENV{'PPYX_UID'} | $EUID )
+                                    aka --uid
+                                    (default value: 0)
+        --group_id INT              Group ID to run as.  DEFAULT: (
+                                    $ENV{'PPYX_GID'} | $EGID )
+                                    aka --gid
+                                    (default value: 0 0)
+        --[no-]reprocess_originals  Reprocess original files. DEFAULT: false
+                                    aka --rpo
+                                    (default value: 0)
+        --[no-]lattitude            add/adjust lattitude.  DEFAULT: true
+                                    aka --lat
+                                    (default value: 1)
+        --[no-]longitude            Add/adjust longitude.  DEFAULT: true
+                                    aka --long
+                                    (default value: 1)
+        --[no-]altitude             Add/adjust altitude.  DEFAULT: true
+                                    aka --alt
+                                    (default value: 1)
+        --[no-]datetime_original    Add/adjust datetime_originial.  DEFAULT:
+                                    true
+                                    aka --dto
+                                    (default value: 1)
+        --[no-]create_date          Add/adjust create_date.  DEFAULT: true
+                                    aka --cdt
+                                    (default value: 1)
+        --[no-]dry_run              Say what would be done, but don't
+                                    actually do it.  DEFAULT: false
+                                    aka --dr
+                                    (default value: 0)
+        --help                      Print usage message and exit.
 ```
 
 ## Building Docker image
@@ -37,3 +70,17 @@ If you don't want to install various Perl deps on your system, build a Docker im
 ```console
 docker build -t photo_prism_yaml_to_exif:latest .
 ```
+
+## Notes
+
+Correct population of the --dirs_ignore option with its intended implementation like:
+
+```console
+--dirs_ignore dir1 dir2 dir3
+```
+
+requires a patch to Getopt::Long::Descriptive.
+
+A patch for Getopt\:\:Long\:\:Descriptive v2.55 is supplied.
+
+See also, [Pull Request](https://github.com/rjbs/Getopt-Long-Descriptive/commit/a84716a7a989293a7f3b5afd9ffd0df6700b9ef4).

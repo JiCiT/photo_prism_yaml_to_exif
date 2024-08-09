@@ -10,127 +10,136 @@ use DateTime::Format::EXIF;
 use File::Basename;
 use File::Find;
 use File::Spec;
-use Getopt::Simple qw($switch);
+use Getopt::Long::Descriptive;
 use Image::ExifTool;
 use List::Util qw(min);
 use Privileges::Drop;
 use YAML::PP;
+use Data::Dumper;
 
 # define available arguments
-my $args = {
-      help                  => {
-          type      => ''
-        , env       => '-'
-        , default   => ''
-        , verbose   => ''
-        , order     => 1
-      }
-    , log_level             => {
-          type      => '=s'
-        , env       => 'LOG_LEVEL'
-        , default   => $ENV{'LOG_LEVEL'} || 'warn'
-        , verbose   => 'Set logging level'
-        , order     => 'debug'
-      }
-    , yaml_dir              => {
-          type      => '=s'
-        , env       => 'YAML_DIR'
-        , default   => $ENV{'YAML_DIR'} || cwd()
-        , verbose   => 'Root directory with PhotoPrism YAML sidecar files'
-        , order     => 2
-      }
-    , image_dir             => {
-          type      => '=s'
-        , env       => 'IMAGE_DIR'
-        , default   => $ENV{'IMAGE_DIR'} || cwd()
-        , verbose   => 'Root directory with original image files'
-        , order     => 3
-      }
-    , uid                   => {
-          type      => '=i'
-        , env       => '-'
-        , default   => $<                                                   # Effective UID
-        , verbose   => 'UserId for file owner (chown)'
-        , order     => 4
-      }
-    , gid                   => {
-          type      => '=i'
-        , env       => '-'
-        , default   => $>                                                   # Effective GID
-        , verbose   => 'GroupId for file owner (chown)'
-        , order     => 5
-      }
-    , reprocess_originals    => {
-          type      => '!'
-        , env       => '-'
-        , default   => 0
-        , verbose   => 'Reprocess original files (.orig file extension)'
-        , order     => 6
-      }
-    , latitude              => {
-          type      => '!'
-        , env       => '-'
-        , default   => 1
-        , verbose   => 'Adjust latitude'
-        , order     => 7
-      }
-    , longitude             => {
-          type      => '!'
-        , env       => '-'
-        , default   => 1
-        , verbose   => 'Adjust longitude'
-        , order     => 8
-      }
-    , altitude              => {
-          type      => '!'
-        , env       => '-'
-        , default   => 1
-        , verbose   => 'Adjust altitude'
-        , order     => 9
-      }
-    , date_time_original    => {
-          type      => '!'
-        , env       => '-'
-        , default   => 1
-        , verbose   => 'Adjust DateTimeOrginal'
-        , order     => 10
-      }
-    , create_date           => {
-          type      => '!'
-        , env       => '-'
-        , default   => 1
-        , verbose   => 'Adjust DateTimeOrginal'
-        , order     => 11
-      }
-};
+my @opt_spec = (
+      [
+          'log_level|ll=s'
+        , 'Logging level.  DEFAULT: ( $ENV{\'PPYX_LOG_LEVEL\'} || info)'
+        , { default         => ( $ENV{'PPYX_LOG_LEVEL'} || 'info' ) }
+      ]
+    , [
+          'yaml_dir|yd=s'
+        , 'Root direcotry with PhotoPrism YAML sidecard files.  DEFAULT: $ENV{\'PPYX_YAML_DIR\'} || cwd()'
+        , { default         => ( $ENV{'PPYX_YAML_DIR'} || cwd() ) }
+      ]
+    , [
+          'image_dir|id=s'
+        , 'Root directory with original image files.  DEFAULT: ( $ENV{\'PPYX_IMAGE_DIR\'} || cwd() )'
+        , { default         => ( $ENV{'PPYX_IMAGE_DIR'} || cwd() ) }
+      ]
+    , [
+          'ignore_dir|xd:s@'
+        , => 'Directory to ignore. May be lsited multiple times.'
+      ]
+    , [
+          'dirs_ignore|dsx:s{,}'
+        , => 'Space delimited list of directories to ignore.  DEFAULT: ( $ENV{\'PPYX_DIRS_IGNORE\'} || [] )'
+        , { default         => ( $ENV{'PPYX_DIRS_IGNORE'} || [] ) }
+      ]
+    , [
+          'user_id|uid=i'
+        , 'User ID to run as.  DEFAULT: ( $ENV{\'PPYX_UID\'} | $EUID )'
+        , { default         => ( $ENV{'PPYX_UID'} || $> ) }
+      ]
+    , [
+          'group_id|gid=i'
+        , 'Group ID to run as.  DEFAULT: ( $ENV{\'PPYX_GID\'} | $EGID )'
+        , { default         => ( $ENV{'PPYX_GID'} || $) ) }
+      ]
+    , [
+          'reprocess_originals|rpo!'
+        , 'Reprocess original files. DEFAULT: false'
+        , { default         => 0 }
+      ]
+    , [
+          'lattitude|lat!'
+        , 'add/adjust lattitude.  DEFAULT: true'
+        , { default         => 1 }
+      ]
+    , [
+          'longitude|long!'
+        , 'Add/adjust longitude.  DEFAULT: true'
+        , { default         => 1 }
+      ]
+    , [
+          'altitude|alt!'
+        , 'Add/adjust altitude.  DEFAULT: true'
+        , { default         => 1 }
+      ]
+     , [
+          'datetime_original|dto!'
+        , 'Add/adjust datetime_originial.  DEFAULT: true'
+        , { default         => 1 }
+      ]
+    , [
+          'create_date|cdt!'
+        , 'Add/adjust create_date.  DEFAULT: true'
+        , { default         => 1 }
+      ]
+    , [
+          'dry_run|dr!'
+        , 'Say what would be done, but don\'t actually do it.  DEFAULT: false'
+        , { default         => 0 }
+      ]
+    , [
+          'help'
+        , 'Print usage message and exit.'
+        , { shortcircuit    => 1 }
+      ]
+);
 
-# get ref to an argument parser
-my $arg = Getopt::Simple->new();
+my ($opt, $usage) = describe_options(
+      '%c %o'
+    , @opt_spec
+    , {
+          getopt_conf       => ['no_bundling']
+        , show_defaults     => 1
+      }
+);
 
-# parse given arguments in relation to defined options
-if (! $arg->getOptions($args, "Usage: photo_prism_yaml_to_exif.pl [args]")) {
-    exit (-1);
+if ($opt->help) {
+    print($usage->text);
+    exit(0);
 }
 
-# get more convienent ref to supplied arguments
-my $args = $arg->{'switch'};
-
-# set log level from CLI args
-Log::ger::Util::set_level($args->{'log_level'});
+# set log level from CLI opt
+Log::ger::Util::set_level($opt->{'log_level'});
 
 # set UID
-if (exists $args->{'uid'} && $args->{'uid'} !~ /^\d+$/) {
-    $args->{'uid'} = getpwnam($args->{'uid'});
+if (exists $opt->{'user_id'} && $opt->{'user_id'} !~ /^\d+$/) {
+    $opt->{'user_id'} = getpwnam($opt->{'user_id'});
 }
 
 # set GID
-if (exists $args->{'gid'} && $args->{'gid'} !~ /^\d+$/) {
-    $args->{'gid'} = getpwnam($args->{'gid'});
+if (exists $opt->{'group_id'} && $opt->{'group_id'} !~ /^[\d\s]+$/) {
+    $opt->{'group_id'} = getpwnam($opt->{'group_id'});
+} else {
+    # get just the first group if more than one is listed
+    $opt->{'group_id'} =~ s/\s.*$//;
 }
 
 # Drop Privileges
-log_info('Dropping privleges to %i:%i', $args->{'uid'}, $args->{'gid'});
-drop_uidgid($args->{'uid'}, $args->{'gid'});
+log_info('Dropping privleges to %i:%i', $opt->{'user_id'}, $opt->{'group_id'});
+
+drop_uidgid($opt->{'user_id'}, $opt->{'group_id'});
+
+# create a list of directories to skip
+my %_skip_dirs;
+{
+    for my $dir (@{$opt->{'ignore_dir'}}) {
+        $_skip_dirs{$dir} = 1;
+    }
+    for my $dir (@{$opt->{'dirs_ignore'}}) {
+        $_skip_dirs{$dir} = 1;
+    }
+}
 
 # Set up YAML parser
 my $ypp = YAML::PP->new;
@@ -148,13 +157,7 @@ sub process_file {
     my $abs_path_image = File::Spec->catfile($File::Find::dir, $filename_image);
     log_debug('processing image file "%s"', $abs_path_image);
 
-    # skip root (.) and parent (..) directories
-    if ($filename_image =~ /^\.{1,2}$/) {
-        log_debug('skipping: current or root directory');
-        return;
-    }
-
-    # skip other directories
+    # skip directories
     if (-d $abs_path_image) {
         log_debug('skipping: directory');
         return;
@@ -169,7 +172,7 @@ sub process_file {
     # if current file is an original file..
     if ($filename_image =~ /\.orig$/) {
         # ...if reprocessing originals...
-        if ($args->{'reprocess_originals'}) {
+        if ($opt->{'reprocess_originals'}) {
             
             # get absolute path to "base" filename
             my $abs_path_base = $abs_path_image =~ s/\.orig$//r;
@@ -204,7 +207,7 @@ sub process_file {
     # if current files is *not* an original file...
     } else {
         #...if reprocessing originals...
-        if ($args->{'reprocess_originals'}) {
+        if ($opt->{'reprocess_originals'}) {
             #...skip it
             log_debug('skipping: non-original');
             return;
@@ -225,10 +228,10 @@ sub process_file {
 
     # get the full path to the YAML file
     # 1. strip off the "root" of the image_dir path 
-    my $sub_dirs = $File::Find::dir =~ s/^\Q$args->{'image_dir'}//r;
+    my $sub_dirs = $File::Find::dir =~ s/^\Q$opt->{'image_dir'}//r;
     log_trace('$sub_dirs = "%s"', $sub_dirs);
     # 2. join togther the "yaml_path" , sub-dirs from step 1, and the filename.yml
-    my $abs_path_yaml = File::Spect->catfile($args->{'yaml_dir'}, $sub_dirs, $filename_yaml);
+    my $abs_path_yaml = File::Spec->catfile($opt->{'yaml_dir'}, $sub_dirs, $filename_yaml);
     log_trace('$abs_path_yaml: "%s"', $abs_path_yaml);
     log_debug('searching for YAML file "%s"', $abs_path_yaml);
 
@@ -331,7 +334,7 @@ sub process_file {
         # __NOTE__ - ignoring time for YAML vs. EXIF comparison
         if (DateTime->compare($date_time_yaml->truncate(to => 'day'), $date_time_exif->truncate(to => 'day')) != 0) {
             # reset EXIF date
-            log_debug('setting EXIF  DateTimeOriginal to %s', $date_time_yaml->iso8601);
+            log_debug('setting EXIF DateTimeOriginal to %s', $date_time_yaml->iso8601);
             $exif_tool->SetNewValue('DateTimeOriginal', $date_time_yaml->iso8601);
         }
 
@@ -341,24 +344,76 @@ sub process_file {
             my $abs_path_image_orig = $abs_path_image . '.orig';
             log_trace('$abs_path_image_orig set to "%s"', $abs_path_image_orig);
 
-            # Rename original file with ".orig" extension
-            log_debug('renaming "%s" to "%s"', $abs_path_image, $abs_path_image_orig);
-
-            unless (rename($abs_path_image, $abs_path_image_orig)) {
-                # if error renaming file then log the error and return from sub-routine
-                log_error('Unable to rename "%s" to "%s" : %s', $abs_path_image, $abs_path_image_orig, $!);
-                return;
+            if ($opt->{'dry_run'}) {
+                say sprintf('DRY_RUN: Rename "%s" to "%s"', $abs_path_image, $abs_path_image_orig);
+                my %tags;
+                for my $key (keys(%{$exif_tool->{NEW_VALUE}})) {
+                    $tags{$exif_tool->{NEW_VALUE}->{$key}->{'TagInfo'}->{'Name'}} = 1;
+                }
+                
+                say sprintf(
+                      'DRY_RUN: Write new EXIF data to "%s" for tags: %s'
+                    , $abs_path_image
+                    , join(', ', keys(%tags))
+                );
+            } else {
+                # Rename original file with ".orig" extension
+                log_debug('renaming "%s" to "%s"', $abs_path_image, $abs_path_image_orig);
+                
+                unless (rename($abs_path_image, $abs_path_image_orig)) {
+                    # if error renaming file then log the error and return from sub-routine
+                    log_error('Unable to rename "%s" to "%s" : %s', $abs_path_image, $abs_path_image_orig, $!);
+                    return;
+                }
+                # Write the new EXIF values into a new file 
+                log_info('writing YAML data into EXIF for file "%s"', $abs_path_image);
+                $exif_tool->WriteInfo($abs_path_image_orig, $abs_path_image);
             }
-            # Write the new EXIF values into a new file 
-            log_info('writing YAML data into EXIF for file "%s"', $abs_path_image);
-            $exif_tool->WriteInfo($abs_path_image_orig, $abs_path_image);
+        } else {
+            log_info('No new EXIF values found during processing of "%s"', $abs_path_image);
         }
     }
 }
 
+sub pre_process_files (@) {
+    my @paths_good;
+    
+    # loop through all the files/directories we've been handed
+    log_trace('Checking for directories that may be skipped');
+    for my $path_end (@_) {
+        # if this is the current and parent director (. or ..)...
+        if ($path_end =~ /\.{1,2}$/) {
+            log_trace('Skipping: "%s"', $path_end);
+        # otherwise if...
+        }
+        elsif (
+               # ...this file/dir name is in the list of directories to ignore...
+               exists($_skip_dirs{$path_end})
+               # ...and it is a directory...
+            && -d File::Spec->catfile($File::Find::dir, $path_end)
+        ) {
+            log_trace('Skipping "%s"', $path_end);
+        # othewise...
+        }
+        else {
+            # ...add it to the list of good paths
+            log_trace('Adding "%s" to items to process', $path_end);
+            push (@paths_good, $path_end);
+        }
+    }
+    
+    return @paths_good;
+}
+    
 # Recurse through YAML dir
-log_debug('Processing image dir "%s"', $args->{'image_dir'});
-find(\&process_file, ($args->{'image_dir'}));
+log_debug('Processing image dir "%s"', $opt->{'image_dir'});
+find(
+      {
+          preprocess => \&pre_process_files
+        , wanted => \&process_file
+      }
+    , ($opt->{'image_dir'})
+);
 
 ### Days In Month
 

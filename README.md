@@ -84,3 +84,14 @@ requires a patch to Getopt::Long::Descriptive.
 A patch for Getopt\:\:Long\:\:Descriptive v2.55 is supplied.
 
 See also, [Pull Request](https://github.com/rjbs/Getopt-Long-Descriptive/commit/a84716a7a989293a7f3b5afd9ffd0df6700b9ef4).
+
+## Extras
+
+- Find duplicate files (by name) across two directories by [Chris Davies](https://unix.stackexchange.com/a/468461).
+- Find diffs in files across two directories by [asclepix](https://stackoverflow.com/a/16788549).
+    - Can be further grep'd to get whatever you might be after.
+- Another way to compare two directories by [Mateen Ulhaq](https://stackoverflow.com/a/4997724).
+- Example on how to find and move files while excluding specific directories
+```bash
+find . -type f -not -wholename "*/thumb/*" -not -wholename "*/mid/*" -not -iname "*.orig" -exec cp --parents "{}" /mnt/sda1/media/Photos/originals/ \;
+```

@@ -63,7 +63,8 @@ photo_prism_yaml_to_exif.pl [long options...]
         --help                      Print usage message and exit.
 ```
 
-## Building Docker image
+## Docker
+### Building Docker image
 
 If you don't want to install various Perl deps on your system, build a Docker image instead.
 
@@ -71,6 +72,29 @@ If you don't want to install various Perl deps on your system, build a Docker im
 docker build -t photo_prism_yaml_to_exif:latest .
 ```
 
+### Using Docker image
+
+Run the Docker image and use volumes to mount your PhotoPrism originals and sidecar directories.
+
+In this example, both my originals and sidecar directories are under the same directory, so I am only using one volume.
+My host system is running SELinux (Fedora Linux) so I also had to add the `:z` option for permissions to work.
+
+```console
+docker run -it -v /home/jonathan/Downloads/photoprism-snapshot:/photos:z djjudas21/photo_prism_yaml_to_exif bash
+```
+
+Once the container is running, the script can be run in the usual way:
+
+```console
+root@c077d6ed1882:/usr/src/app# perl photo_prism_yaml_to_exif.pl --image_dir /photos/originals/ --yaml_dir /photos/sidecar/ --log_level info
+Dropping privleges to 0:0
+writing YAML data into EXIF for file "/photos/originals/2014/09/20140912_210541_E7EA5C08.jpg"
+writing YAML data into EXIF for file "/photos/originals/2014/09/20140913_135330_68981765.jpg"
+writing YAML data into EXIF for file "/photos/originals/2014/09/20140912_162729_CDEC749D.jpg"
+writing YAML data into EXIF for file "/photos/originals/2014/09/20140912_162729_C1D2F3C5.jpg"
+...
+```
+=======
 ## Notes
 
 Correct population of the --dirs_ignore option with its intended implementation like:

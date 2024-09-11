@@ -44,6 +44,10 @@ my @opt_spec = (
         , { default         => ( $ENV{'PPYX_DIRS_IGNORE'} || [] ) }
       ]
     , [
+          'image_regex|ir:s@'
+        , 'Regular expression to match against file name for processing.  May be listed multiple times.  NOTE: Match against *any* listed regex will be processed.'
+      ]
+    , [
           'user_id|uid=i'
         , 'User ID to run as.  DEFAULT: ( $ENV{\'PPYX_UID\'} | $EUID )'
         , { default         => ( $ENV{'PPYX_UID'} || $> ) }
@@ -139,6 +143,12 @@ my %_skip_dirs;
     for my $dir (@{$opt->{'dirs_ignore'}}) {
         $_skip_dirs{$dir} = 1;
     }
+}
+
+# create a list of image regexes
+my @_image_regexes;
+for my $regex (@{$opt->{image_regex}}) {
+    push(@_image_regexes, qr/$regex/);
 }
 
 # Set up YAML parser
@@ -380,31 +390,46 @@ sub pre_process_files (@) {
     
     # loop through all the files/directories we've been handed
     log_trace('Checking for directories that may be skipped');
-    for my $path_end (@_) {
+    PATH: for my $path_end (@_) {
         # if this is the current and parent director (. or ..)...
         if ($path_end =~ /\.{1,2}$/) {
             log_trace('Skipping: "%s"', $path_end);
-        # otherwise if...
+            next;
         }
-        elsif (
+        
+        # if...
+        if (
                # ...this file/dir name is in the list of directories to ignore...
                exists($_skip_dirs{$path_end})
                # ...and it is a directory...
             && -d File::Spec->catfile($File::Find::dir, $path_end)
         ) {
             log_trace('Skipping "%s"', $path_end);
-        # othewise...
+            next;
         }
-        else {
-            # ...add it to the list of good paths
-            log_trace('Adding "%s" to items to process', $path_end);
-            push (@paths_good, $path_end);
+        
+        # loop through all image regexes
+        for my $image_regex (@_image_regexes) {
+            # if
+            if (
+                   # we're looking at a file (vs. directory)...
+                   -f $path_end
+                   # and this path matches this image_regex...
+                && $path_end =~ $image_regex
+            ) {
+                # ...add this path to the list of good paths
+                log_trace('Adding "%s" to items to process', $path_end);
+                push (@paths_good, $path_end);
+                # skip to the next PATH
+                next PATH;
+            }
         }
     }
     
+    # return the list of good paths
     return @paths_good;
 }
-    
+
 # Recurse through YAML dir
 log_debug('Processing image dir "%s"', $opt->{'image_dir'});
 find(

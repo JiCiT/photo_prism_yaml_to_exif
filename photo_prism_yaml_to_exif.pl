@@ -393,12 +393,12 @@ sub process_file {
     }
 }
 
-sub pre_process_files (@) {
+sub pre_process_files (@files) {
     my @paths_good;
     
     # loop through all the files/directories we've been handed
     log_trace('Checking for directories that may be skipped');
-    PATH: for my $path_end (@_) {
+    PATH: for my $path_end (@files) {
         # if this is the current and parent director (. or ..)...
         if ($path_end =~ /\.{1,2}$/) {
             log_trace('Skipping: "%s"', $path_end);

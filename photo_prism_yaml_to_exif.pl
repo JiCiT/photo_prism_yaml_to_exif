@@ -1,5 +1,6 @@
 use strict;
-use v5.12;
+use v5.38;
+use feature 'try';
 
 use Log::ger::Output 'Screen';
 use Log::ger::Util;
@@ -312,7 +313,14 @@ sub process_file {
         # if EXIF has DateTimeOriginal...
         if ($date_time_exif) {
             #...convert to DateTime object
-            $date_time_exif = DateTime::Format::EXIF->parse_datetime($date_time_exif);
+            try {
+                $date_time_exif = DateTime::Format::EXIF->parse_datetime($date_time_exif);
+            } catch ($e) {
+                warn "Unable to parse DateTimeOriginal date from EXIF: ${date_time_exif} :: $e.  Setting DateTimeOriginal for YAML comparison to epoch.";
+                
+                # ...set exif date to EPOCH
+                $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
+            }
         # otherwise...
         } else {
             # ...set exif date to EPOCH

@@ -309,22 +309,55 @@ sub process_file {
         # get DateTimeOriginal from EXIF
         log_trace('checking if EXIF has DateTimeOriginal set');
         my $date_time_exif = $data_exif->{'DateTimeOriginal'};
-        
+        log_trace('raw EXIF date_time: %s', $date_time_exif);
+
         # if EXIF has DateTimeOriginal...
         if ($date_time_exif) {
-            #...convert to DateTime object
-            try {
-                $date_time_exif = DateTime::Format::EXIF->parse_datetime($date_time_exif);
-            } catch ($e) {
-                warn "Unable to parse DateTimeOriginal date from EXIF: ${date_time_exif} :: $e.  Setting DateTimeOriginal for YAML comparison to epoch.";
-                
+            # parse EXIF datetime data
+            log_trace('Verifying that raw EXIF date_time is properly formatted');
+            $date_time_exif =~ /(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/;
+            
+            # verify that EXIF data received meets expected pattern
+            if (
+                   defined $1
+                && defined $2
+                && defined $3
+                && defined $4
+                && defined $5
+                && defined $6
+            ) {
+                # modify parsed EXIF data if its out of bounds
+                log_trace('modifying raw EXIF date_time for any out of bounds values');
+                my $exif_year   = ($1 >  0 && $1 < 9999) ? $1 : '1900';
+                my $exif_month  = ($2 >  0 && $2 <=  12) ? $2 :   '01';
+                my $exif_day    = ($3 >  0 && $3 <=  12) ? $3 :   '01';
+                my $exif_hour   = ($4 >= 0 && $4 <=  23) ? $4 :   '00';
+                my $exif_minute = ($5 >= 0 && $5 <=  59) ? $5 :   '00';
+                my $exif_second = ($6 >= 0 && $6 <=  59) ? $6 :   '00';
+            
+                $date_time_exif = join(':', ($exif_year, $exif_month, $exif_day)) . ' ' . join(':', ($exif_hour, $exif_minute, $exif_second));
+            
+                log_trace('Final EXIF date_time: %s', $date_time_exif);
+            
+                #...convert to DateTime object
+                try {
+                    $date_time_exif = DateTime::Format::EXIF->parse_datetime($date_time_exif);
+                } catch ($e) {
+                    warn "Unable to parse DateTimeOriginal date from EXIF: ${date_time_exif} :: $e.  Setting DateTimeOriginal for YAML comparison to epoch.";
+                    
+                    # ...set exif date to EPOCH
+                    $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
+                }
+            # otherwise...
+            } else {
+                log_trace('raw EXIF date_time is invalid.  Setting to epoch.');
                 # ...set exif date to EPOCH
                 $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
             }
         # otherwise...
         } else {
             # ...set exif date to EPOCH
-            $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
+#            $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
         }
         log_debug('$date_time_exif: %s', $date_time_exif->iso8601);
         

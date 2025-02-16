@@ -234,7 +234,7 @@ sub process_file {
     }
 
     # get the yaml filename for the image file...
-    my $filename_yaml = $filename_image =~ s/\..*?$/\.yml/r;
+    my $filename_yaml = $filename_image =~ s/\.[^.]+$/.yml/r;
     log_trace('$filename_yaml: "%s"', $filename_yaml);
 
     # get the full path to the YAML file

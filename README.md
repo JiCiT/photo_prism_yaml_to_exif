@@ -29,6 +29,9 @@ photo_prism_yaml_to_exif.pl [long options...]
                                     $ENV{'PPYX_DIRS_IGNORE'} || [] )
                                     aka --dsx
                                     (default value: ARRAY(0x5555a52bd948))
+        --image_regex               Regular expression to match against file name for processing.
+                                    May be listed multiple times.
+                                    NOTE: Match against *any* listed regex will be processed.
         --user_id INT               User ID to run as.  DEFAULT: (
                                     $ENV{'PPYX_UID'} | $EUID )
                                     aka --uid

@@ -77,7 +77,9 @@ docker build -t photo_prism_yaml_to_exif:latest .
 
 ### Using Docker image
 
-Run the Docker image in lieu of the native perl script
+#### CLI Remains in "Base" System
+
+With this method, when the script ends you are still within your base system.
 
 ```console
 docker run \
@@ -90,6 +92,32 @@ jicit/photo_prism_yaml_to_exiif:latest \
  --image_dir /images \
  <any other desired script options>
 ```
+
+#### CLI Inside Container
+
+With this method, you enter and remain inside the container environment until you specifically exit.
+
+```console
+docker run \
+-it \
+--rm \
+--mount type=bind,src=<yaml_dir>,dst=/yaml \
+--mount type=bind,src=<image_dir>,dst=/images \
+--entrypoint bash \
+```
+
+At this point you're now inside the container and inside the direcotry /usr/src/photo_prism_yaml_to_exif.
+
+You can run the script via:
+
+```console
+perl ./photo_prism_yaml_to_exif.pl \
+--yaml_dir /yaml \
+--image_dir /images \
+<any other desired script options>
+```
+To exit the container simply use the ```exit``` command.
+
 =======
 ## Notes
 

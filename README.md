@@ -83,7 +83,7 @@ In this example, both my originals and sidecar directories are under the same di
 My host system is running SELinux (Fedora Linux) so I also had to add the `:z` option for permissions to work.
 
 ```console
-docker run -it -v /home/jonathan/Downloads/photoprism-snapshot:/photos:z djjudas21/photo_prism_yaml_to_exif bash
+docker run -it -v /home/jonathan/Downloads/photoprism-snapshot:/photos:z jicit/photo_prism_yaml_to_exif:latest bash
 ```
 
 Once the container is running, the script can be run in the usual way:

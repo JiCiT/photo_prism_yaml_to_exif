@@ -87,7 +87,7 @@ docker run \
 --rm \
 --mount type=bind,src=<yaml_dir>,dst=/yaml \
 --mount type=bind,src=<image_dir>,dst=/images \
-jicit/photo_prism_yaml_to_exiif:latest \
+jicit/photo_prism_yaml_to_exif:latest \
  --yaml_dir /yaml \
  --image_dir /images \
  <any other desired script options>

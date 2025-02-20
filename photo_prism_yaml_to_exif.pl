@@ -442,6 +442,9 @@ sub process_file {
         } else {
             log_info('No new EXIF values found during processing of "%s"', $abs_path_image);
         }
+    # otherwise...
+    } else {
+        log_info('"%s" is not a file (likely does not exist)', $abs_path_yaml);
     }
 }
 
@@ -458,31 +461,26 @@ sub pre_process_files (@files) {
             next;
         }
         
-        # if...
-        if (
-               # ...this file/dir name is in the list of directories to ignore...
-               exists($_skip_dirs{$path_end})
-               # ...and it is a directory...
-            && -d File::Spec->catfile($File::Find::dir, $path_end)
-        ) {
-            log_trace('pre_process_files: Skipping "%s"', $path_end);
-            next;
-        }
-        
-        # loop through all image regexes
-        for my $image_regex (@_image_regexes) {
-            # if
-            if (
-                   # we're looking at a file (vs. directory)...
-                   -f $path_end
-                   # and this path matches this image_regex...
-                && $path_end =~ $image_regex
-            ) {
-                # ...add this path to the list of good paths
-                log_trace('pre_process_files: Adding "%s" to items to process', $path_end);
-                push (@paths_good, $path_end);
-                # skip to the next PATH
-                next PATH;
+        # if we're currently processing a directory...
+        if (-d File::Spec->catfile($File::Find::dir, $path_end)) {
+            # ... and this dir name is in the list of directories to ignore...
+            if (exists($_skip_dirs{$path_end})) {
+                # skip to the next directory entry
+                log_trace('pre_process_files: Skipping directory "%s"', $path_end);
+                next;
+            }
+        # otherwise we must be looking at a file
+        } else {
+            # loop through all image regexes
+            for my $image_regex (@_image_regexes) {
+                # if  this path matches this image_regex...
+                if ($path_end =~ $image_regex) {
+                    # ...add this path to the list of good paths
+                    log_trace('pre_process_files: Adding "%s" to items to process', $path_end);
+                    push (@paths_good, $path_end);
+                    # skip to the next PATH
+                    next PATH;
+                }
             }
         }
 
@@ -491,7 +489,6 @@ sub pre_process_files (@files) {
             , $path_end
             , join(', ', @_image_regexes)
         );
-
     }
     
     # return the list of good paths

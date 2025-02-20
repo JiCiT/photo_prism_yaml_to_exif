@@ -47,6 +47,7 @@ my @opt_spec = (
     , [
           'image_regex|ir:s@'
         , 'Regular expression to match against file name for processing.  May be listed multiple times.  NOTE: Match against *any* listed regex will be processed.'
+        , { default         => ['.+'] }
       ]
     , [
           'user_id|uid=i'
@@ -130,10 +131,28 @@ if (exists $opt->{'group_id'} && $opt->{'group_id'} !~ /^[\d\s]+$/) {
     $opt->{'group_id'} =~ s/\s.*$//;
 }
 
-# Drop Privileges
-log_info('Dropping privleges to %i:%i', $opt->{'user_id'}, $opt->{'group_id'});
+# set image_regex
+if (scalar(@{$opt->{'image_regex'}}) == 0) {
+    $opt->{'image_regex'} = ['.+'];
+}
 
-drop_uidgid($opt->{'user_id'}, $opt->{'group_id'});
+log_debug('supplied options');
+foreach my $key (keys %{$opt}) {
+    if (ref($opt->{$key}) eq 'ARRAY') {
+        log_debug($key . ' : ' . join(' : ', @{$opt->{$key}}));
+    } else {
+        log_debug($key . ' : ' . $opt->{$key});
+    }
+}
+
+# Drop Privileges
+if (
+       ( exists $opt->{'user_id'}  && $opt->{'user_id'}  != $> )
+    || ( exists $opt->{'group_id'} && $opt->{'group_id'} != $) )
+) {
+    log_info('Dropping privleges to %i:%i', $opt->{'user_id'}, $opt->{'group_id'});
+    drop_uidgid($opt->{'user_id'}, $opt->{'group_id'});
+}
 
 # create a list of directories to skip
 my %_skip_dirs;
@@ -160,23 +179,23 @@ my $exif_tool = Image::ExifTool->new;
 
 # loop through supplied source directory(ies)
 sub process_file {
-    # get a more descriptivie reference to the image file
+    # get a more descriptive reference to the image file
     my $filename_image = $_;
-    log_trace('$filename_image: "%s"', $filename_image);
+    log_trace('process_file: $filename_image: "%s"', $filename_image);
     
     # get absolute path to image
     my $abs_path_image = File::Spec->catfile($File::Find::dir, $filename_image);
-    log_debug('processing image file "%s"', $abs_path_image);
+    log_debug('process_file: processing image file "%s"', $abs_path_image);
 
     # skip directories
     if (-d $abs_path_image) {
-        log_debug('skipping: directory');
+        log_debug('process file: skipping: directory');
         return;
     }
     
     # skip backup files
     if ($filename_image =~ /\.bak(?:_\d+)*$/) {
-        log_debug('skipping: backup');
+        log_debug('process file: skipping: backup');
         return;
     }
     
@@ -192,7 +211,7 @@ sub process_file {
             # if the base file exists...
             if (-f $abs_path_base) {
                 # ...remove it
-                log_debug('Removing current base file "%s"', $abs_path_base);
+                log_debug('process_file: Removing current base file "%s"', $abs_path_base);
                 unless (unlink $abs_path_base) {
                     log_error('Unable to delete exisitng replacement file: "%s"', $abs_path_base);
                     return;
@@ -200,7 +219,7 @@ sub process_file {
             }
             
             # rename the original file back to its base name
-            log_debug('Renaming original file back to "%s"', $abs_path_base);
+            log_debug('process_file: Renaming original file back to "%s"', $abs_path_base);
             unless(rename($abs_path_image, $abs_path_base)) {
                 log_error('Unable to rename "%s" to "%s"', $abs_path_image, $abs_path_base);
                 return;
@@ -212,7 +231,7 @@ sub process_file {
         # ...if *not* reprocessing originals...
         } else {
             #...skip it
-            log_debug('skipping: original');
+            log_debug('process_file: skipping: original');
             return;
         }
     # if current files is *not* an original file...
@@ -220,14 +239,14 @@ sub process_file {
         #...if reprocessing originals...
         if ($opt->{'reprocess_originals'}) {
             #...skip it
-            log_debug('skipping: non-original');
+            log_debug('process_file: skipping: non-original');
             return;
         #...if *not* reprocessing originals...
         } else {
             # ...if an original file exists...
             if (-f $abs_path_image . '.orig') {
                 # ...skip this file
-                log_debug('skipping: original file exists');
+                log_debug('process_file: skipping: original file exists');
                 return;
             }
         }
@@ -430,11 +449,12 @@ sub pre_process_files (@files) {
     my @paths_good;
     
     # loop through all the files/directories we've been handed
-    log_trace('Checking for directories that may be skipped');
+    log_trace('pre_process_files: Checking for directories that may be skipped');
     PATH: for my $path_end (@files) {
+        log_trace('pre_process_files: processing $path_end "%s"', $path_end);
         # if this is the current and parent director (. or ..)...
         if ($path_end =~ /\.{1,2}$/) {
-            log_trace('Skipping: "%s"', $path_end);
+            log_trace('pre_process_files: Skipping: "%s"', $path_end);
             next;
         }
         
@@ -445,7 +465,7 @@ sub pre_process_files (@files) {
                # ...and it is a directory...
             && -d File::Spec->catfile($File::Find::dir, $path_end)
         ) {
-            log_trace('Skipping "%s"', $path_end);
+            log_trace('pre_process_files: Skipping "%s"', $path_end);
             next;
         }
         
@@ -459,12 +479,19 @@ sub pre_process_files (@files) {
                 && $path_end =~ $image_regex
             ) {
                 # ...add this path to the list of good paths
-                log_trace('Adding "%s" to items to process', $path_end);
+                log_trace('pre_process_files: Adding "%s" to items to process', $path_end);
                 push (@paths_good, $path_end);
                 # skip to the next PATH
                 next PATH;
             }
         }
+
+        log_trace(
+              'pre_process_files: eliminating "%s" from processing - did not match any image regex in "%s"'
+            , $path_end
+            , join(', ', @_image_regexes)
+        );
+
     }
     
     # return the list of good paths

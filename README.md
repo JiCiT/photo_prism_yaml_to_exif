@@ -7,62 +7,69 @@ A perl script to transfer data from PhotoPrism created YAML sidecar flies to the
 
 ```console
 photo_prism_yaml_to_exif.pl [long options...]
-        --log_level STR             Logging level.  DEFAULT: (
-                                    $ENV{'PPYX_LOG_LEVEL'} || info)
+        --log_level STR             Logging level.
+                                    DEFAULT: (ENV{'PPYX_LOG_LEVEL'} || info)
                                     aka --ll
-                                    (default value: info)
-        --yaml_dir STR              Root direcotry with PhotoPrism YAML
-                                    sidecard files.  DEFAULT:
-                                    $ENV{'PPYX_YAML_DIR'} || cwd()
+
+        --yaml_dir STR              Root direcotry with PhotoPrism YAML sidecard files.
+                                    DEFAULT: ( $ENV{'PPYX_YAML_DIR'} || cwd() )
+                                    **NOTE: You almost certainly will want to specify this.**
                                     aka --yd
-                                    (default value: /mnt/sda1/media/Photos/backup_working)
+
         --image_dir STR             Root directory with original image files.
-                                     DEFAULT: ( $ENV{'PPYX_IMAGE_DIR'} ||
-                                    cwd() )
+                                    DEFAULT: ( $ENV{'PPYX_IMAGE_DIR'} || cwd() )
+                                    **NOTE: You almost certainly will want to specify this.**
                                     aka --id
-                                    (default value: /mnt/sda1/media/Photos/backup_working)
-        --ignore_dir[=STR...]       Directory to ignore. May be lsited
-                                    multiple times.
+
+        --ignore_dir[=STR...]       Directory to ignore.
+                                    DEFAULT (<none>) -- don't ignore any directories
+                                    May be lsited multiple times.
                                     aka --xd
-        --dirs_ignore[=STR]         Space delimited list of directories to
-                                    ignore.  DEFAULT: (
-                                    $ENV{'PPYX_DIRS_IGNORE'} || [] )
+
+        --dirs_ignore[=STR]         Space delimited list of directories to ignore.
+                                    DEFAULT: ( $ENV{'PPYX_DIRS_IGNORE'} || [] )
                                     aka --dsx
-                                    (default value: ARRAY(0x5555a52bd948))
+
         --image_regex               Regular expression to match against file name for processing.
                                     May be listed multiple times.
                                     NOTE: Match against *any* listed regex will be processed.
-        --user_id INT               User ID to run as.  DEFAULT: (
-                                    $ENV{'PPYX_UID'} | $EUID )
+
+        --user_id INT               User ID to run as.
+                                    DEFAULT: ( $ENV{'PPYX_UID'} | $EUID )
                                     aka --uid
-                                    (default value: 0)
-        --group_id INT              Group ID to run as.  DEFAULT: (
-                                    $ENV{'PPYX_GID'} | $EGID )
+
+        --group_id INT              Group ID to run as.
+                                    DEFAULT: ( $ENV{'PPYX_GID'} | $EGID )
                                     aka --gid
-                                    (default value: 0 0)
-        --[no-]reprocess_originals  Reprocess original files. DEFAULT: false
+
+        --[no-]reprocess_originals  Reprocess original files (files with .bak extension).
+                                    DEFAULT: false
                                     aka --rpo
-                                    (default value: 0)
-        --[no-]lattitude            add/adjust lattitude.  DEFAULT: true
+
+        --[no-]lattitude            add/adjust lattitude.
+                                    DEFAULT: true
                                     aka --lat
-                                    (default value: 1)
-        --[no-]longitude            Add/adjust longitude.  DEFAULT: true
+
+        --[no-]longitude            Add/adjust longitude.
+                                    DEFAULT: true
                                     aka --long
-                                    (default value: 1)
-        --[no-]altitude             Add/adjust altitude.  DEFAULT: true
+
+        --[no-]altitude             Add/adjust altitude.
+                                    DEFAULT: true
                                     aka --alt
-                                    (default value: 1)
-        --[no-]datetime_original    Add/adjust datetime_originial.  DEFAULT:
-                                    true
+
+        --[no-]datetime_original    Add/adjust datetime_originial.
+                                    DEFAULT: true
                                     aka --dto
-                                    (default value: 1)
-        --[no-]create_date          Add/adjust create_date.  DEFAULT: true
+
+        --[no-]create_date          Add/adjust create_date.
+                                    DEFAULT: true
                                     aka --cdt
-                                    (default value: 1)
-        --[no-]dry_run              Say what would be done, but don't
-                                    actually do it.  DEFAULT: false
+
+        --[no-]dry_run              Say what would be done, but don't actually do it.
+                                    DEFAULT: false
                                     aka --dr
-                                    (default value: 0)
+
         --help                      Print usage message and exit.
 ```
 

@@ -150,7 +150,7 @@ if (
        ( exists $opt->{'user_id'}  && $opt->{'user_id'}  != $> )
     || ( exists $opt->{'group_id'} && $opt->{'group_id'} != $) )
 ) {
-    log_info('Dropping privleges to %i:%i', $opt->{'user_id'}, $opt->{'group_id'});
+    log_info('dropping privleges to %i:%i', $opt->{'user_id'}, $opt->{'group_id'});
     drop_uidgid($opt->{'user_id'}, $opt->{'group_id'});
 }
 
@@ -185,24 +185,27 @@ sub process_file {
     
     # get absolute path to image
     my $abs_path_image = File::Spec->catfile($File::Find::dir, $filename_image);
-    log_debug('process_file: processing image file "%s"', $abs_path_image);
+    log_debug('process_file: evaluating path "%s"', $abs_path_image);
 
     # skip directories
     if (-d $abs_path_image) {
-        log_debug('process file: skipping: directory');
+        log_debug('process file: eval result: skipping: directory');
         return;
     }
     
     # skip backup files
     if ($filename_image =~ /\.bak(?:_\d+)*$/) {
-        log_debug('process file: skipping: backup');
+        log_debug('process file: eval result: skipping: backup');
         return;
     }
     
     # if current file is an original file..
     if ($filename_image =~ /\.orig$/) {
+        log_debug('process file: eval result: original file (*.orig)');
+
         # ...if reprocessing originals...
         if ($opt->{'reprocess_originals'}) {
+            log_debug('process file: $opt->{\'reprocess_originals\'}: true :: processing');
             
             # get absolute path to "base" filename
             my $abs_path_base = $abs_path_image =~ s/\.orig$//r;
@@ -231,7 +234,7 @@ sub process_file {
         # ...if *not* reprocessing originals...
         } else {
             #...skip it
-            log_debug('process_file: skipping: original');
+            log_debug('process file: $opt->{\'reprocess_originals\'}: false :: skipping');
             return;
         }
     # if current files is *not* an original file...
@@ -254,37 +257,37 @@ sub process_file {
 
     # get the yaml filename for the image file...
     my $filename_yaml = $filename_image =~ s/\.[^.]+$/.yml/r;
-    log_trace('$filename_yaml: "%s"', $filename_yaml);
+    log_trace('process_file: $filename_yaml: "%s"', $filename_yaml);
 
     # get the full path to the YAML file
     # 1. strip off the "root" of the image_dir path 
     my $sub_dirs = $File::Find::dir =~ s/^\Q$opt->{'image_dir'}//r;
-    log_trace('$sub_dirs = "%s"', $sub_dirs);
-    # 2. join togther the "yaml_path" , sub-dirs from step 1, and the filename.yml
+    log_trace('process_file: $sub_dirs = "%s"', $sub_dirs);
+    # 2. join together the "yaml_path" , sub-dirs from step 1, and the filename.yml
     my $abs_path_yaml = File::Spec->catfile($opt->{'yaml_dir'}, $sub_dirs, $filename_yaml);
-    log_trace('$abs_path_yaml: "%s"', $abs_path_yaml);
-    log_debug('searching for YAML file "%s"', $abs_path_yaml);
+    log_trace('process_file: $abs_path_yaml: "%s"', $abs_path_yaml);
+    log_debug('process_file: searching for YAML file "%s"', $abs_path_yaml);
 
     # verify that a YAML file exits
-    log_trace('checking if $abs_path_yaml "%s" is a file', $abs_path_yaml); 
+    log_trace('process_file: checking if $abs_path_yaml "%s" is a file', $abs_path_yaml); 
     if (-f $abs_path_yaml) {
-        log_debug('found YAML file "%s"', $abs_path_yaml);
+        log_debug('process_file: found YAML file "%s"', $abs_path_yaml);
         
         # parse the YAML file into a perl data structure 
-        log_debug('Loading YAML data');
+        log_debug('process_file: Loading YAML data');
         my $data_yaml = $ypp->load_file($abs_path_yaml);
         
         # clear any previous set values in exif tool
-        log_trace('clearing old set exiftool set values');
+        log_trace('process_file: clearing old set exiftool set values');
         $exif_tool->SetNewValue();
 
         # get EXIF info for the orresponding image file
-        log_trace('parsing EXIF data into $data_exif');
+        log_trace('process_file: parsing EXIF data into $data_exif');
         my $data_exif = $exif_tool->ImageInfo($abs_path_image);
         
         # LATITUDE
         # if...
-        log_trace('checking if latitude set in YAML, but not in EXIF');
+        log_trace('process_file: checking if latitude set in YAML, but not in EXIF');
         if (
                 #...YAML has Lat and...
                 $data_yaml->{'Lat'}
@@ -292,13 +295,13 @@ sub process_file {
             &&  (! $data_exif->{'GPSLatitude'})
         ) {
             #... set the latitude
-            log_debug('setting EXIF latitude to %s', $data_yaml->{'Lat'});
+            log_debug('process_file: setting EXIF latitude to %s', $data_yaml->{'Lat'});
             $exif_tool->SetNewValue('GPSLatitude*', $data_yaml->{'Lat'});
         }
         
         # LONGITUDE
         # if...
-        log_trace('checking if longitude set in YAML, but not in EXIF');
+        log_trace('process_file: checking if longitude set in YAML, but not in EXIF');
         if (
                 #...YAML has Lng and...
                 $data_yaml->{'Lng'}
@@ -306,13 +309,13 @@ sub process_file {
                 &&  (! $data_exif->{'GPSLongitude'})
         ) {
             # set the longitude
-            log_debug('setting EXIF longitude to %s', $data_yaml->{'Lng'});
+            log_debug('process_file: setting EXIF longitude to %s', $data_yaml->{'Lng'});
             $exif_tool->SetNewValue('GPSLongitude*', $data_yaml->{'Lng'});
         }
         
         # ALTITUDE
         # if...
-        log_trace('checking if altitute set in YAML, but not in EXIF');
+        log_trace('process_file: checking if altitute set in YAML, but not in EXIF');
         if (
                 #...YAML has Alt and...
                 $data_yaml->{'Alt'}
@@ -320,20 +323,20 @@ sub process_file {
             &&  (! $data_exif->{'GPSAltitude*'})
         ) {
             # set the longitude
-            log_debug('setting EXIF altitude to %s', $data_yaml->{'Alt'});
+            log_debug('process_file: setting EXIF altitude to %s', $data_yaml->{'Alt'});
             $exif_tool->SetNewValue('GPSAltitude*', $data_yaml->{'Alt'});
         }
         
         # DATE
         # get DateTimeOriginal from EXIF
-        log_trace('checking if EXIF has DateTimeOriginal set');
+        log_trace('process_file: checking if EXIF has DateTimeOriginal set');
         my $date_time_exif = $data_exif->{'DateTimeOriginal'};
-        log_trace('raw EXIF date_time: %s', $date_time_exif);
+        log_trace('process_file: raw EXIF date_time: %s', $date_time_exif);
 
         # if EXIF has DateTimeOriginal...
         if ($date_time_exif) {
             # parse EXIF datetime data
-            log_trace('Verifying that raw EXIF date_time is properly formatted');
+            log_trace('process_file: verifying that raw EXIF date_time is properly formatted');
             $date_time_exif =~ /(\d\d\d\d):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)/;
             
             # verify that EXIF data received meets expected pattern
@@ -346,7 +349,7 @@ sub process_file {
                 && defined $6
             ) {
                 # modify parsed EXIF data if its out of bounds
-                log_trace('modifying raw EXIF date_time for any out of bounds values');
+                log_trace('process_file: modifying raw EXIF date_time for any out of bounds values');
                 my $exif_year   = ($1 >  0 && $1 < 9999) ? $1 : '1900';
                 my $exif_month  = ($2 >  0 && $2 <=  12) ? $2 :   '01';
                 my $exif_day    = ($3 >  0 && $3 <=  12) ? $3 :   '01';
@@ -356,7 +359,7 @@ sub process_file {
             
                 $date_time_exif = join(':', ($exif_year, $exif_month, $exif_day)) . ' ' . join(':', ($exif_hour, $exif_minute, $exif_second));
             
-                log_trace('Final EXIF date_time: %s', $date_time_exif);
+                log_trace('process_file: final EXIF date_time: %s', $date_time_exif);
             
                 #...convert to DateTime object
                 try {
@@ -369,7 +372,7 @@ sub process_file {
                 }
             # otherwise...
             } else {
-                log_trace('raw EXIF date_time is invalid.  Setting to epoch.');
+                log_trace('process_file: raw EXIF date_time is invalid.  Setting to epoch.');
                 # ...set exif date to EPOCH
                 $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
             }
@@ -378,7 +381,7 @@ sub process_file {
             # ...set exif date to EPOCH
 #            $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
         }
-        log_debug('$date_time_exif: %s', $date_time_exif->iso8601);
+        log_debug('process_file: $date_time_exif: %s', $date_time_exif->iso8601);
         
         # prime/assume YAML datatime will be the same
         my $date_time_yaml = $date_time_exif->clone();
@@ -388,23 +391,23 @@ sub process_file {
         my $date_to_month   = $data_yaml->{'Month'} > 0 ? $data_yaml->{'Month'} : 1;
         my $date_to_day     = $data_yaml->{'Day'}   > 0 ? $data_yaml->{'Day'}   : 1;
         
-        log_trace('$date_to_year: %i',  $date_to_year);
-        log_trace('$date_to_month: %i', $date_to_month);
-        log_trace('$date_to_day: %i',   $date_to_day);
+        log_trace('process_file: $date_to_year: %i',  $date_to_year);
+        log_trace('process_file: $date_to_month: %i', $date_to_month);
+        log_trace('process_file: $date_to_day: %i',   $date_to_day);
 
         # ensure day is not greater than the number of days in the month!
         $date_to_day        = min($date_to_day, days_in_month($date_to_year, $date_to_month));
-        log_trace('$date_to_day adjusted to: %i',   $date_to_day);
+        log_trace('process_file: $date_to_day adjusted to: %i',   $date_to_day);
 
-        log_trace('Setting $date_time_yaml to %i-%i-%i', $date_to_year, $date_to_month, $date_to_day);
+        log_trace('process_file: setting $date_time_yaml to %i-%i-%i', $date_to_year, $date_to_month, $date_to_day);
         $date_time_yaml->set(year => $date_to_year, month => $date_to_month, day => $date_to_day);
-        log_trace('$date_time_yaml: %s"', $date_time_yaml->iso8601);
+        log_trace('process_file: $date_time_yaml: %s"', $date_time_yaml->iso8601);
 
         # if YAML date is different than EXIF date...
         # __NOTE__ - ignoring time for YAML vs. EXIF comparison
         if (DateTime->compare($date_time_yaml->truncate(to => 'day'), $date_time_exif->truncate(to => 'day')) != 0) {
             # reset EXIF date
-            log_debug('setting EXIF DateTimeOriginal to %s', $date_time_yaml->iso8601);
+            log_debug('process_file: setting EXIF DateTimeOriginal to %s', $date_time_yaml->iso8601);
             $exif_tool->SetNewValue('DateTimeOriginal', $date_time_yaml->iso8601);
         }
 
@@ -412,7 +415,7 @@ sub process_file {
         if ($exif_tool->CountNewValues() > 0) {
             # set absolute path to original image
             my $abs_path_image_orig = $abs_path_image . '.orig';
-            log_trace('$abs_path_image_orig set to "%s"', $abs_path_image_orig);
+            log_trace('process_file: $abs_path_image_orig set to "%s"', $abs_path_image_orig);
 
             if ($opt->{'dry_run'}) {
                 say sprintf('DRY_RUN: Rename "%s" to "%s"', $abs_path_image, $abs_path_image_orig);
@@ -428,11 +431,11 @@ sub process_file {
                 );
             } else {
                 # Rename original file with ".orig" extension
-                log_debug('renaming "%s" to "%s"', $abs_path_image, $abs_path_image_orig);
+                log_debug('process_file: renaming "%s" to "%s"', $abs_path_image, $abs_path_image_orig);
                 
                 unless (rename($abs_path_image, $abs_path_image_orig)) {
                     # if error renaming file then log the error and return from sub-routine
-                    log_error('Unable to rename "%s" to "%s" : %s', $abs_path_image, $abs_path_image_orig, $!);
+                    log_error('process_file: Unable to rename "%s" to "%s" : %s', $abs_path_image, $abs_path_image_orig, $!);
                     return;
                 }
                 # Write the new EXIF values into a new file 
@@ -440,7 +443,7 @@ sub process_file {
                 $exif_tool->WriteInfo($abs_path_image_orig, $abs_path_image);
             }
         } else {
-            log_info('No new EXIF values found during processing of "%s"', $abs_path_image);
+            log_info('no new EXIF values found during processing of "%s"', $abs_path_image);
         }
     # otherwise...
     } else {
@@ -452,7 +455,7 @@ sub pre_process_files (@files) {
     my @paths_good;
     
     # loop through all the files/directories we've been handed
-    log_trace('pre_process_files: Checking for directories that may be skipped');
+    log_trace('pre_process_files: pre_process_files: Checking for directories that may be skipped');
     PATH: for my $path_end (@files) {
         log_trace('pre_process_files: processing $path_end "%s"', $path_end);
         # if this is the current and parent director (. or ..)...
@@ -468,6 +471,9 @@ sub pre_process_files (@files) {
                 # skip to the next directory entry
                 log_trace('pre_process_files: Skipping directory "%s"', $path_end);
                 next;
+            } else {
+                log_trace('pre_process_files: Adding directory "%s" to @paths_good', $path_end);
+                push (@paths_good, $path_end);
             }
         # otherwise we must be looking at a file
         } else {
@@ -480,15 +486,17 @@ sub pre_process_files (@files) {
                     push (@paths_good, $path_end);
                     # skip to the next PATH
                     next PATH;
+                # otherwise...
+                } else {
+                    # ...log that file doesn't math @_image_regexes
+                    log_trace(
+                          'pre_process_files: eliminating file "%s" from processing - did not match any image regex in "%s"'
+                        , $path_end
+                        , join(', ', @_image_regexes)
+                    );
                 }
             }
         }
-
-        log_trace(
-              'pre_process_files: eliminating "%s" from processing - did not match any image regex in "%s"'
-            , $path_end
-            , join(', ', @_image_regexes)
-        );
     }
     
     # return the list of good paths
@@ -496,7 +504,7 @@ sub pre_process_files (@files) {
 }
 
 # Recurse through YAML dir
-log_debug('Processing image dir "%s"', $opt->{'image_dir'});
+log_debug('processing image dir "%s"', $opt->{'image_dir'});
 find(
       {
           preprocess => \&pre_process_files

@@ -1,4 +1,4 @@
-# photo_prism_yaml_to_exif
+# `photo_prism_yaml_to_exif`
 
 ## Description
 A perl script to transfer data from PhotoPrism created YAML sidecar flies to the associated image file's EXIF data.
@@ -119,7 +119,7 @@ docker run \
 --entrypoint bash \
 ```
 
-At this point you're now inside the container and inside the direcotry /usr/src/photo_prism_yaml_to_exif.
+At this point you're now inside the container and inside the direcotry `/usr/src/photo_prism_yaml_to_exif`.
 
 You can run the script via:
 
@@ -129,12 +129,12 @@ perl ./photo_prism_yaml_to_exif.pl \
 --image_dir /images \
 <any other desired script options>
 ```
-To exit the container simply use the ```exit``` command.
+To exit the container simply use the `exit` command.
 
 =======
 ## Notes
 
-Correct population of the --dirs_ignore option with its intended implementation like:
+Correct population of the `--dirs_ignore` option with its intended implementation like:
 
 ```console
 --dirs_ignore dir1 dir2 dir3

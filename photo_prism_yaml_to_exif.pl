@@ -379,7 +379,8 @@ sub process_file {
         # otherwise...
         } else {
             # ...set exif date to EPOCH
-#            $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
+            log_trace('process_file: EXIF contains no datetime information.  Setting EXIF datatime information to EPOCH for comparison with YAML data');
+            $date_time_exif = my $dt = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
         }
         log_debug('process_file: $date_time_exif: %s', $date_time_exif->iso8601);
         

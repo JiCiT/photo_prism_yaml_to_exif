@@ -1,4 +1,4 @@
-# photo_prism_yaml_to_exif
+# `photo_prism_yaml_to_exif`
 
 ## Description
 A perl script to transfer data from PhotoPrism created YAML sidecar flies to the associated image file's EXIF data.
@@ -76,7 +76,13 @@ photo_prism_yaml_to_exif.pl [long options...]
 ## Docker
 ### Building Docker image
 
-If you don't want to install various Perl deps on your system, build a Docker image instead.
+If you don't want to install various Perl deps on your system, a Docker image is provided at
+[`jicit/photo_prism_yaml_to_exif`](https://hub.docker.com/r/jicit/photo_prism_yaml_to_exif).
+
+The `latest` tag of this image is rebuilt every time there is a new push to the `main` branch on this repo.
+Stable tags will be built when tags or releases are created on this repo that conform to `v0.0.0` format.
+
+You can still build the Docker image manually:
 
 ```console
 docker build -t photo_prism_yaml_to_exif:latest .
@@ -113,7 +119,7 @@ docker run \
 --entrypoint bash \
 ```
 
-At this point you're now inside the container and inside the direcotry /usr/src/photo_prism_yaml_to_exif.
+At this point you're now inside the container and inside the direcotry `/usr/src/photo_prism_yaml_to_exif`.
 
 You can run the script via:
 
@@ -123,12 +129,12 @@ perl ./photo_prism_yaml_to_exif.pl \
 --image_dir /images \
 <any other desired script options>
 ```
-To exit the container simply use the ```exit``` command.
+To exit the container simply use the `exit` command.
 
 =======
 ## Notes
 
-Correct population of the --dirs_ignore option with its intended implementation like:
+Correct population of the `--dirs_ignore` option with its intended implementation like:
 
 ```console
 --dirs_ignore dir1 dir2 dir3

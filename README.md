@@ -76,7 +76,13 @@ photo_prism_yaml_to_exif.pl [long options...]
 ## Docker
 ### Building Docker image
 
-If you don't want to install various Perl deps on your system, build a Docker image instead.
+If you don't want to install various Perl deps on your system, a Docker image is provided at
+[`jicit/photo_prism_yaml_to_exif`](https://hub.docker.com/r/jicit/photo_prism_yaml_to_exif).
+
+The `latest` tag of this image is rebuilt every time there is a new push to the `main` branch on this repo.
+Stable tags will be built when tags or releases are created on this repo that conform to `v0.0.0` format.
+
+You can still build the Docker image manually:
 
 ```console
 docker build -t photo_prism_yaml_to_exif:latest .

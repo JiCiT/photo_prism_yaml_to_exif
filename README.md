@@ -34,6 +34,10 @@ photo_prism_yaml_to_exif.pl [long options...]
                                     May be listed multiple times.
                                     NOTE: Match against *any* listed regex will be processed.
 
+        --[no-]cmp_mtime            Compare mtimes of YAML and image file.  Process only if YAML newer than image.
+                                    DEFAULT: false
+                                    aka: --cmt
+
         --user_id INT               User ID to run as.
                                     DEFAULT: ( $ENV{'PPYX_UID'} | $EUID )
                                     aka --uid
@@ -46,7 +50,7 @@ photo_prism_yaml_to_exif.pl [long options...]
                                     DEFAULT: false
                                     aka --rpo
 
-        --[no-]lattitude            add/adjust lattitude.
+        --[no-]latitude             add/adjust latitude.
                                     DEFAULT: true
                                     aka --lat
 

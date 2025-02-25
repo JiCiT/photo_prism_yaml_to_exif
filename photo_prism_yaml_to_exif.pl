@@ -234,7 +234,7 @@ my %_skip_dirs;
     for my $dir (@{$opt->{'ignore_dir'}}) {
         $_skip_dirs{$dir} = 1;
     }
-    for my $dir (@{$opt->{'dirs_ignore'}}) {
+    for my $dir (split(/\s+/, $opt->{'dirs_ignore'})) {
         $_skip_dirs{$dir} = 1;
     }
 }

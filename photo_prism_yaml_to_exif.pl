@@ -8,6 +8,7 @@ use Log::ger;
 use Cwd;
 use DateTime;
 use DateTime::Format::EXIF;
+use DateTime::Format::ISO8601;
 use File::Basename;
 use File::Find;
 use File::Spec;
@@ -25,6 +26,16 @@ my @opt_spec = (
           'log_level|ll=s'
         , 'Logging level.  DEFAULT: ( $ENV{\'PPYX_LOG_LEVEL\'} || info)'
         , { default         => ( $ENV{'PPYX_LOG_LEVEL'} || 'info' ) }
+      ]
+    , [
+          'keep_last_run_time|klrt!'
+        , 'Store run time in <yaml_dir>/.last_run'
+        , { default         => 0 }
+      ]
+    , [
+          'yaml_ctime_newer_than_last_run|ynlr!'
+        , 'YAML file creation time must be newer than time stored in <yaml_dir>/.last_run.  Forces keep_last_run_time to TRUE and cmp_mtime to FALSE'
+        , { default         => 0 }
       ]
     , [
           'yaml_dir|yd=s'
@@ -124,6 +135,15 @@ if ($opt->help) {
 # set log level from CLI opt
 Log::ger::Util::set_level($opt->{'log_level'});
 
+# if requested to check YAML ctime...
+if ($opt->{'yaml_ctime_newer_than_last_run'}) {
+    # ...keep the runtime too
+    log_debug('main: forcing keep_last_run_time = 1');
+    $opt->{'keep_last_run_time'} = 1;
+    log_debug('main: forcing cmp_mtime = 0');
+    $opt->{'cmp_mtime'} = 0;
+}
+
 # standardize paths
 $opt->{'yaml_dir'} =~ s/\\/\//g;
 $opt->{'image_dir'} =~ s/\\/\//g;
@@ -164,6 +184,45 @@ if (
 ) {
     log_info('dropping privleges to %i:%i', $opt->{'user_id'}, $opt->{'group_id'});
     drop_uidgid($opt->{'user_id'}, $opt->{'group_id'});
+}
+
+# prime some variables
+my $lr_file = File::Spec->catfile($opt->{'yaml_dir'}, '.last_run');
+my $last_run_time;
+# if requested to check YAML ctime...
+
+if ($opt->{'yaml_ctime_newer_than_last_run'}) {
+    # read the .last_run file
+    # check for existence if .last_run file
+    $lr_file = File::Spec->catfile($opt->{'yaml_dir'}, '.last_run');
+    # if a .last_run file exists...
+    if (-f $lr_file) {
+        # ...open the .last_run file
+        log_trace('main: opening .lastrun file "%s"', $lr_file);
+        open (my $lr, '<', $lr_file);
+        # read the first line from the file
+        $last_run_time = $lr->getline();
+        # close the file
+        close $lr;
+        
+        # if the time looks to be in ISO8601 format...
+        if ($last_run_time =~ /^\d{4}-(?:[0][1-9]|1[0-2])-(?:[0][1-9]|[1-2]\d|3[01])T[0-2]\d:[0-5]\d:[0-5]\d$/) {
+            # ...parse the last run time into a DateTime
+            $last_run_time = DateTime::Format::ISO8601->parse_datetime($last_run_time);
+        # otherwise...
+        } else {
+            # ...use epoch time
+            log_warn('Last run time "%s" does not conform to iso8601.  Setting last run time to epoch');
+            $last_run_time = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
+        }
+    # otherwise...
+    } else {
+        # ...use epoch time
+        log_warn('Last run file "%s" does not found!  Setting last run time to epoch', $lr_file);
+        $last_run_time = DateTime->from_epoch(epoch => 0, time_zone => 'UTC');
+    }
+    
+    log_info('Last run time set to: %s', $last_run_time->iso8601);
 }
 
 # create a list of directories to skip
@@ -274,19 +333,36 @@ sub process_file {
     # get the full path to the YAML file
     # 1. strip off the "root" of the image_dir path
     my $sub_dirs = $File::Find::dir =~ s/^\Q$opt->{'image_dir'}//r;
+    
     log_trace('process_file: $sub_dirs = "%s"', $sub_dirs);
     # 2. join together the "yaml_path" , sub-dirs from step 1, and the filename.yml
     my $abs_path_yaml = File::Spec->catfile($opt->{'yaml_dir'}, $sub_dirs, $filename_yaml);
     log_trace('process_file: $abs_path_yaml: "%s"', $abs_path_yaml);
     log_debug('process_file: searching for YAML file "%s"', $abs_path_yaml);
 
-    # verify that a YAML file exits
     log_trace('process_file: checking if $abs_path_yaml "%s" is a file', $abs_path_yaml);
+    # if the YAML file exists...
     if (-f $abs_path_yaml) {
         log_debug('process_file: found YAML file "%s"', $abs_path_yaml);
 
-        # if we are comparing image and YAML mtimes...
-        if ($opt->{'cmp_mtime'}) {
+        # if we are comparing YAML ctimes to .last_run time...
+        if ($opt->{'yaml_ctime_newer_than_last_run'}) {
+            log_trace('process_file: comparing YAML ctime to .last_run time');
+            
+            # get YAML stats
+            my $yaml_stat = stat($abs_path_yaml) or die $!;
+            # get ctime as a DataTime object
+            my $yaml_time = DateTime->from_epoch($yaml_stat->ctime);
+            
+            # if the YAML time is after the last_run_time...
+            if (DateTime->compare($yaml_time, $last_run_time) == 1) {
+                log_debug('YAML time %s is after last_run_time %s: processing image', $yaml_time->iso8601, $last_run_time->iso8601);
+            } else {
+                log_debug('YAML time %s is before last_run_time %s: NOT processing image', $yaml_time->iso8601, $last_run_time->iso8601);
+                return;
+            }
+        # otherwise, if we are comparing image and YAML mtimes...
+        } elsif ($opt->{'cmp_mtime'}) {
             log_trace('process_file: comparing image and YAML mtimes');
 
             # get YAML stats
@@ -546,6 +622,23 @@ find(
       }
     , ($opt->{'image_dir'})
 );
+
+# if comparing YAML time to last_run_time...
+if ($opt->{'keep_last_run_time'}) {
+    # if we're doing a dry run...
+    if ($opt->{'dry_run'}) {
+        # ...say what we would do
+        say sprintf('DRY_RUN: Write current time to "%s"', $lr_file);
+    # otherwise...
+    } else {
+        # ...open .last_run file (clobbering any existing)
+        open (my $lr, '>', $lr_file);
+        # print the curretn time the .last_run_file in iso8601 format
+        $lr->print(DateTime->now()->iso8601);
+        # close the file
+        close $lr;
+    }
+}
 
 ### Days In Month
 

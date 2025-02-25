@@ -7,74 +7,85 @@ A perl script to transfer data from PhotoPrism created YAML sidecar flies to the
 
 ```console
 photo_prism_yaml_to_exif.pl [long options...]
-        --log_level STR             Logging level.
-                                    DEFAULT: (ENV{'PPYX_LOG_LEVEL'} || info)
-                                    aka --ll
+        --log_level STR                         Logging level.
+                                                DEFAULT: (ENV{'PPYX_LOG_LEVEL'} || info)
+                                                aka --ll
 
-        --yaml_dir STR              Root direcotry with PhotoPrism YAML sidecard files.
-                                    DEFAULT: ( $ENV{'PPYX_YAML_DIR'} || cwd() )
-                                    **NOTE: You almost certainly will want to specify this.**
-                                    aka --yd
+        -[no-]keep_last_run_time                Keep a .last_run file in the --yam_dir.  Holds time of end of last run in ISO8601 format
+                                                DEFAULT: 0 (false)
+                                                aka --klrt
+        
+        --[no-]yaml_ctime_newer_than_last_run  YAML file creation time must be newer than time stored in <yaml_dir>/.last_run.  Forces keep_last_run_time to TRUE and cmp_mtime to FALSE'
+                                                DEFAULT: 0 (false)
+                                                aka --ynlr
+        , '
+        , { default         => 0 }
+      ]
 
-        --image_dir STR             Root directory with original image files.
-                                    DEFAULT: ( $ENV{'PPYX_IMAGE_DIR'} || cwd() )
-                                    **NOTE: You almost certainly will want to specify this.**
-                                    aka --id
+        --yaml_dir STR                          Root direcotry with PhotoPrism YAML sidecard files.
+                                                DEFAULT: ( $ENV{'PPYX_YAML_DIR'} || cwd() )
+                                                **NOTE: You almost certainly will want to specify this.**
+                                                aka --yd
 
-        --ignore_dir[=STR...]       Directory to ignore.
-                                    DEFAULT (<none>) -- don't ignore any directories
-                                    May be lsited multiple times.
-                                    aka --xd
+        --image_dir STR                         Root directory with original image files.
+                                                DEFAULT: ( $ENV{'PPYX_IMAGE_DIR'} || cwd() )
+                                                **NOTE: You almost certainly will want to specify this.**
+                                                aka --id
 
-        --dirs_ignore[=STR]         Space delimited list of directories to ignore.
-                                    DEFAULT: ( $ENV{'PPYX_DIRS_IGNORE'} || [] )
-                                    aka --dsx
+        --ignore_dir[=STR...]                   Directory to ignore.
+                                                DEFAULT (<none>) -- don't ignore any directories
+                                                May be lsited multiple times.
+                                                aka --xd
 
-        --image_regex               Regular expression to match against file name for processing.
-                                    May be listed multiple times.
-                                    NOTE: Match against *any* listed regex will be processed.
+        --dirs_ignore[=STR]                     Space delimited list of directories to ignore.
+                                                DEFAULT: ( $ENV{'PPYX_DIRS_IGNORE'} || [] )
+                                                aka --dsx
 
-        --[no-]cmp_mtime            Compare mtimes of YAML and image file.  Process only if YAML newer than image.
-                                    DEFAULT: false
-                                    aka: --cmt
+        --image_regex                           Regular expression to match against file name for processing.
+                                                May be listed multiple times.
+                                                NOTE: Match against *any* listed regex will be processed.
 
-        --user_id INT               User ID to run as.
-                                    DEFAULT: ( $ENV{'PPYX_UID'} | $EUID )
-                                    aka --uid
+        --[no-]cmp_mtime                        Compare mtimes of YAML and image file.  Process only if YAML newer than image.
+                                                DEFAULT: false
+                                                aka: --cmt
 
-        --group_id INT              Group ID to run as.
-                                    DEFAULT: ( $ENV{'PPYX_GID'} | $EGID )
-                                    aka --gid
+        --user_id INT                           User ID to run as.
+                                                DEFAULT: ( $ENV{'PPYX_UID'} | $EUID )
+                                                aka --uid
 
-        --[no-]reprocess_originals  Reprocess original files (files with .bak extension).
-                                    DEFAULT: false
-                                    aka --rpo
+        --group_id INT                          Group ID to run as.
+                                                DEFAULT: ( $ENV{'PPYX_GID'} | $EGID )
+                                                aka --gid
 
-        --[no-]latitude             add/adjust latitude.
-                                    DEFAULT: true
-                                    aka --lat
+        --[no-]reprocess_originals              Reprocess original files (files with .bak extension).
+                                                DEFAULT: false
+                                                aka --rpo
 
-        --[no-]longitude            Add/adjust longitude.
-                                    DEFAULT: true
-                                    aka --long
+        --[no-]latitude                         add/adjust latitude.
+                                                DEFAULT: true
+                                                aka --lat
 
-        --[no-]altitude             Add/adjust altitude.
-                                    DEFAULT: true
-                                    aka --alt
+        --[no-]longitude                        Add/adjust longitude.
+                                                DEFAULT: true
+                                                aka --long
 
-        --[no-]datetime_original    Add/adjust datetime_originial.
-                                    DEFAULT: true
-                                    aka --dto
+        --[no-]altitude                         Add/adjust altitude.
+                                                DEFAULT: true
+                                                aka --alt
 
-        --[no-]create_date          Add/adjust create_date.
-                                    DEFAULT: true
-                                    aka --cdt
+        --[no-]datetime_original                Add/adjust datetime_originial.
+                                                DEFAULT: true
+                                                aka --dto
 
-        --[no-]dry_run              Say what would be done, but don't actually do it.
-                                    DEFAULT: false
-                                    aka --dr
+        --[no-]create_date                      Add/adjust create_date.
+                                                DEFAULT: true
+                                                aka --cdt
 
-        --help                      Print usage message and exit.
+        --[no-]dry_run                          Say what would be done, but don't actually do it.
+                                                DEFAULT: false
+                                                aka --dr
+
+        --help                                  Print usage message and exit.
 ```
 
 ## Docker

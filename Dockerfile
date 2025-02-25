@@ -15,6 +15,7 @@ RUN cpanm \
     Log::ger::Output::Screen \
     YAML::PP \
     DateTime::Format::EXIF \
+    DateTime::Format::ISO8601 \
     List::Util
 
 # patch Descriptive.pm

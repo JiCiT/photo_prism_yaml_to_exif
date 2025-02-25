@@ -124,6 +124,12 @@ if ($opt->help) {
 # set log level from CLI opt
 Log::ger::Util::set_level($opt->{'log_level'});
 
+# standardize paths
+$opt->{'yaml_dir'} =~ s/\\/\//g;
+$opt->{'image_dir'} =~ s/\\/\//g;
+$opt->{'dirs_ignore'} =~ s/\\/\//g;
+s/\\/\//g for @{$opt->{'ignore_dir'}};
+
 # set UID
 if (exists $opt->{'user_id'} && $opt->{'user_id'} !~ /^\d+$/) {
     $opt->{'user_id'} = getpwnam($opt->{'user_id'});

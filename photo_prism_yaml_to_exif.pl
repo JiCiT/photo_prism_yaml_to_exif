@@ -127,8 +127,11 @@ my ($opt, $usage) = describe_options(
       }
 );
 
-if ($opt->help) {
+# if help requested...
+if ($opt->{'help'}) {
+    # print the help message...
     print($usage->text);
+    # ...and exit
     exit(0);
 }
 
